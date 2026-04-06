@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mensagem do seu amigo</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+        
+        body {
+            margin: 0; padding: 0;
+            height: 100vh;
+            background: #ffffff;
+            color: #000;
+            font-family: 'Press Start 2P', system-ui;
+            overflow: hidden;
+            text-align: center;
+        }
+        
+        #startScreen {
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            background: #ffffff;
+            padding: 20px;
+        }
+        
+        #startScreen h1 { font-size: 2.1rem; margin-bottom: 20px; }
+        #startScreen p { font-size: 1.35rem; max-width: 85%; margin-bottom: 35px; line-height: 1.4; }
+        
+        button {
+            padding: 18px 50px;
+            font-size: 1.35rem;
+            background: #000;
+            color: #fff;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.4);
+            width: 85%;
+            max-width: 380px;
+        }
+        
+        .error-msg {
+            color: #ff0000;
+            font-size: 1.25rem;
+            margin-top: 25px;
+            display: none;
+            line-height: 1.4;
+        }
+        
+        canvas { 
+            position: absolute; top: 0; left: 0; 
+            z-index: 1; opacity: 0.25; display: none;
+        }
+        
+        #content {
+            position: relative; z-index: 2;
+            height: 100vh; display: none;
+            flex-direction: column;
+            align-items: center; justify-content: center;
+            padding: 20px; gap: 15px;
+            background: #000; color: #00ff00;
+        }
+        
+        .hack-line {
+            font-size: 1.4rem;
+            text-shadow: 0 0 15px #ff0000;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .hack-line.show { opacity: 1; }
+        
+        #cameraPreview {
+            position: fixed;
+            bottom: 30px; right: 30px;
+            width: 180px; height: 240px;
+            border: 6px solid #ff0000;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 0 40px #ff0000;
+            z-index: 30;
+            display: none;
+        }
+        
+        #cameraPreview video {
+            width: 100%; height: 100%; object-fit: cover;
+        }
+        
+        #final {
+            color: #ff0000;
+            font-size: 2.8rem;
+            text-shadow: 0 0 40px #ff0000;
+            animation: shake 0.4s infinite;
+        }
+        
+        @keyframes shake {
+            0%,100% { transform: translate(0); }
+            25% { transform: translate(-6px,6px); }
+            75% { transform: translate(6px,-6px); }
+        }
+    </style>
+</head>
+<body>
+    <div id="startScreen">
+        <h1>Mensagem do seu amigo</h1>
+        <p>Ei, clica aqui pra ver o vídeo engraçado que eu mandei agora 😂</p>
+        <button onclick="requestCamera()">VER MENSAGEM / VÍDEO</button>
+        <div id="errorMsg" class="error-msg">
+            Permissão negada.<br>
+            Tenta de novo ou permite a câmera nas configurações do Chrome.
+        </div>
+    </div>
+
+    <canvas id="matrix"></canvas>
+    <div id="content"></div>
+    
+    <div id="cameraPreview">
+        <video id="video" autoplay playsinline muted></video>
+    </div>
+
+    <audio id="alarm" loop>
+        <source src="https://orangefreesounds.com/wp-content/uploads/2022/11/Scary-alarm-sound.mp3" type="audio/mpeg">
+    </audio>
+
+    <script>
+        const audio = document.getElementById('alarm');
+        const content = document.getElementById('content');
+        const startScreen = document.getElementById('startScreen');
+        const errorMsg = document.getElementById('errorMsg');
+        const cameraPreview = document.getElementById('cameraPreview');
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('matrix');
+        const ctx = canvas.getContext('2d');
+
+        let w = canvas.width = window.innerWidth;
+        let h = canvas.height = window.innerHeight;
+        const chars = "01ハックCÂMERAATIVADASEUTROUXA";
+        const fontSize = 17;
+        const columns = Math.floor(w / fontSize);
+        const drops = Array(columns).fill(1);
+
+        function drawMatrix() {
+            ctx.fillStyle = 'rgba(0,0,0,0.1)';
+            ctx.fillRect(0, 0, w, h);
+            ctx.fillStyle = '#00ff41';
+            ctx.font = fontSize + 'px monospace';
+            for (let i = 0; i < drops.length; i++) {
+                const text = chars[Math.floor(Math.random() * chars.length)];
+                ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+                if (drops[i] * fontSize > h && Math.random() > 0.97) drops[i] = 0;
+                drops[i]++;
+            }
+        }
+
+        // Função principal
+        async function requestCamera() {
+            // Esconde a mensagem de erro toda vez que tentar novamente
+            errorMsg.style.display = 'none';
+            startScreen.style.display = 'none';
+
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: "user" } 
+                });
+
+                // Permissão OK
+                video.srcObject = stream;
+                cameraPreview.style.display = 'block';
+                startPrank();
+
+            } catch (err) {
+                // Permissão negada → volta tudo e mostra erro
+                startScreen.style.display = 'flex';
+                errorMsg.style.display = 'block';
+            }
+        }
+
+        function startPrank() {
+            content.style.display = 'flex';
+            canvas.style.display = 'block';
+            setInterval(drawMatrix, 32);
+
+            audio.volume = 0.95;
+            audio.play().catch(() => {});
+            
+            if ('vibrate' in navigator) {
+                navigator.vibrate([900, 250, 900, 250, 800]);
+            }
+
+            const messages = [
+                "⚠️ ACESSANDO CÂMERA...",
+                "GRAVANDO SEU ROSTO AO VIVO",
+                "ENVIANDO IMAGENS..."
+            ];
+
+            let i = 0;
+            const msgInterval = setInterval(() => {
+                if (i < messages.length) {
+                    const line = document.createElement('div');
+                    line.className = 'hack-line';
+                    line.textContent = messages[i];
+                    content.appendChild(line);
+                    setTimeout(() => line.classList.add('show'), 50);
+                    i++;
+                } else {
+                    clearInterval(msgInterval);
+                }
+            }, 450);
+
+            // 5 segundos com câmera ao vivo
+            setTimeout(() => {
+                content.innerHTML = `
+                    <div id="final">
+                        SE VOCÊ FOI HACKEADO,<br>
+                        SEU TROUXA! 💀😂
+                    </div>
+                `;
+                
+                setTimeout(() => {
+                    window.location.href = "https://www.instagram.com/direct/inbox/";
+                }, 1200);
+            }, 5000);
+        }
+    </script>
+</body>
+</html>
